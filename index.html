@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feeding Time</title>
+    <style>
+        .feeding-time{
+            width: 540px;
+            height: 540px;
+            box-sizing: border-box;
+            border-radius: 50%;
+            position: relative;
+        }
+        .feeding-time .feeding-time-item{
+            box-sizing: border-box;
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background-color: #33cc33;  
+        }
+        .feeding-time .feeding-time-item[data-selected="true"]{
+            background-color: transparent; 
+            border: 1px solid #33cc33; 
+        }
+        .feeding-time, .feeding-time-item{
+            -webkit-touch-callout: none; /* iOS Safari */
+              -webkit-user-select: none; /* Safari */
+               -khtml-user-select: none; /* Konqueror HTML */
+                 -moz-user-select: none; /* Old versions of Firefox */
+                  -ms-user-select: none; /* Internet Explorer/Edge */
+                      user-select: none; /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.slim.min.js" integrity="sha256-u7e5khyithlIdTpu22PHhENmPcRdFiHRjhAuHcs05RI=" crossorigin="anonymous"></script>
+    <script>
+        $(document).ready(function(e){
+            createBackground();
+            $('.feeding-time').find('.feeding-time-item').each(function(idx){
+                var radius = $(this).parent().width()/2;
+                var centerX = radius;
+                var centerY = radius;
+                var max = radius - 42;
+                var rad = max - (20 * idx);
+                var obj = $(this);
+                obj.attr('data-idx', idx);
+                var angle = idx * 360 / ($(this).siblings().length + 1);
+                var angle2 = obj.find('input[type="hidden"]').val();
+                if(angle2 != '')
+                {
+                    angle = parseFloat(angle2);
+                }
+                obj.find('input[type="hidden"]').val(angle);
+                obj.attr('data-title', angle2time(angle));
+                renderTime(obj, centerX, centerY, rad, angle);
+            });
+            $(document).on('mousedown', '.feeding-time .feeding-time-item', function(e2){
+                $(this).siblings().each(function(e3){
+                    $(this).removeAttr('data-selected');
+                });
+                $(this).attr('data-selected', 'true');
+            });
+            $(document).on('mouseup', '.feeding-time', function(e2){
+                $(this).find('.feeding-time-item').each(function(e3){
+                    $(this).removeAttr('data-selected');
+                });
+                $('#time-preview').css('display', 'none');
+            });
+            $(document).on('mouseover', '.feeding-time-item', function(e2){
+                var time = $(this).attr('data-title')
+                $('#time-preview').text(time);
+                $('#time-preview').css('display', 'block');
+            });
+            $(document).on('mouseout', '.feeding-time-item', function(e2){
+                $('#time-preview').css('display', 'none');
+            });
+            $(document).on('mousemove', '.feeding-time', function(e2){
+                var radius = $(this).width()/2;
+                var centerX = radius;
+                var centerY = radius;
+                var obj = $(this).find('.feeding-time-item[data-selected="true"]');
+                if(obj.length > 0)
+                {
+                    var clientX = e2.clientX - $(this).offset().left;
+                    var clientY = e2.clientY - $(this).offset().top;
+                    var dx = clientX - centerX;
+                    var dy = clientY - centerY;
+                    var max = radius - 42;
+                    var idx = parseInt(obj.attr('data-idx'));
+                    var rad = max - (20 * idx);
+                    var angle = rad2ded(Math.atan2(dy, dx)) + 90;   
+                    var time = angle2time(angle);
+                    $('#time-preview').text(time);
+                    $('#time-preview').css('display', 'block');
+                    obj.attr('data-title', time);
+                    obj.find('input[type="hidden"]').val(angle);                 
+                    renderTime(obj, centerX, centerY, rad, angle);
+                }
+            });
+        });
+        function rotate(deg)
+        {
+            var obj1 = $('.feeding-time');
+            var radius = obj1.width()/2;
+            var centerX = radius;
+            var centerY = radius;
+            var max = radius - 42;
+            obj1.find('.feeding-time-item').each(function(idx){
+                
+                var obj = $(this);
+                var rad = max - (20 * idx);
+                var angle = parseFloat(obj.find('input[type="hidden"]').val());   
+                angle += deg;       
+                $(this).find('input[type="hidden"]').val(angle);
+                var time = angle2time(angle);
+                obj.attr('title', time);
+                obj.find('input[type="hidden"]').val(angle);                 
+                renderTime(obj, centerX, centerY, rad, angle);
+            });
+        }
+        function angle2time(angle)
+        {
+            var hour = angle * 24 / 360;
+            if(hour < 0)
+            {
+                hour = hour + 24;
+            }
+            var dms = real2dms(hour);
+            var time = dmsFormat(dms);
+            return time;
+        }
+        function dmsFormat(dms)
+        {
+            if(dms.d < 10)
+            {
+                dms.d = '0'+dms.d;
+            }
+            if(dms.m < 10)
+            {
+                dms.m = '0'+dms.m;
+            }
+            if(dms.s < 10)
+            {
+                dms.s = '0'+dms.s;
+            }
+            return dms.d+':'+dms.m+':'+dms.s;
+        }
+        function real2dms(deg) {
+            var absolute = Math.abs(deg);
+            var degrees = Math.floor(absolute);
+            var minutesNotTruncated = (absolute - degrees) * 60;
+            var minutes = Math.floor(minutesNotTruncated);
+            var seconds = Math.floor((minutesNotTruncated - minutes) * 60);
+            return {d:degrees, m:minutes, s:seconds};
+        }
+        
+        function renderTime(obj, centerX, centerY, rad, angle)
+        {
+            var cx = centerX + (Math.sin(deg2rad(angle)) * rad);
+            var cy = centerY - (Math.cos(deg2rad(angle)) * rad);
+            obj.css({top:cy-obj.height()/2, left:cx-obj.width()/2});
+        }
+        function deg2rad(angle)
+        {
+            return Math.PI * angle / 180;
+        }
+        function rad2ded(angle)
+        {
+            return 180 * angle / Math.PI;
+        }
+        function createBackground()
+        {
+            var canvas = $('#canvas')[0];
+            var ctx = canvas.getContext('2d');
+            ctx.font = "11px Arial"; 
+            var i;
+            var cx = canvas.width / 2;
+            var cy = canvas.height / 2;
+            var rad1 = 40;
+            var rad2 = 240;
+            var rad3 = 258;
+            ctx.strokeStyle = "#88cc99";
+            ctx.textAlign = "center"; 
+            ctx.fillStyle = "#666666";
+            for(i = 0; i<24; i++)
+            {
+                
+                var angle = (Math.PI * i / 12);
+                var px1 = cx + Math.cos(angle) * rad1;
+                var py1 = cy + Math.sin(angle) * rad1;
+                var px2 = cx + Math.cos(angle) * rad2;
+                var py2 = cy + Math.sin(angle) * rad2;
+                var px3 = cx + Math.cos(angle) * rad3;
+                var py3 = cy + Math.sin(angle) * rad3;
+                ctx.beginPath();
+                ctx.moveTo(px1, py1);
+                ctx.lineTo(px2, py2);
+                ctx.stroke(); 
+                var hour = (i*360/24) + 90;
+                if(hour >= 360)
+                {
+                    hour = hour - 360;
+                }
+                var time = angle2time(hour).substr(0, 5);
+                ctx.fillText(time, px3, py3+5); 
+            }
+            ctx.strokeStyle = "#bbcccc";
+            ctx.setLineDash([4, 4]);
+            for(i = 0; i<24; i++)
+            {
+                var angle = (Math.PI * (i + 0.5) / 12);
+                var px1 = cx + Math.cos(angle) * rad1;
+                var py1 = cy + Math.sin(angle) * rad1;
+                var px2 = cx + Math.cos(angle) * rad2;
+                var py2 = cy + Math.sin(angle) * rad2;
+                ctx.beginPath();
+                ctx.moveTo(px1, py1);
+                ctx.lineTo(px2, py2);
+                ctx.stroke(); 
+            }
+            ctx.strokeStyle = "#ccdddd";
+            ctx.setLineDash([2, 2]);
+            for(i = 0; i<24; i++)
+            {
+                var angle = (Math.PI * (i + 0.25) / 12);
+                var px1 = cx + Math.cos(angle) * rad1;
+                var py1 = cy + Math.sin(angle) * rad1;
+                var px2 = cx + Math.cos(angle) * rad2;
+                var py2 = cy + Math.sin(angle) * rad2;
+                ctx.beginPath();
+                ctx.moveTo(px1, py1);
+                ctx.lineTo(px2, py2);
+                ctx.stroke(); 
+            }
+            for(i = 0; i<24; i++)
+            {
+                var angle = (Math.PI * (i + 0.75) / 12);
+                var px1 = cx + Math.cos(angle) * rad1;
+                var py1 = cy + Math.sin(angle) * rad1;
+                var px2 = cx + Math.cos(angle) * rad2;
+                var py2 = cy + Math.sin(angle) * rad2;
+                ctx.beginPath();
+                ctx.moveTo(px1, py1);
+                ctx.lineTo(px2, py2);
+                ctx.stroke(); 
+            }
+            ctx.setLineDash([]);
+            ctx.strokeStyle = "#88cc99";
+            ctx.beginPath();
+            ctx.arc(cx, cy, rad1, 0, 2 * Math.PI);
+            ctx.stroke(); 
+            ctx.beginPath();
+            ctx.arc(cx, cy, rad2, 0, 2 * Math.PI);
+            ctx.stroke(); 
+        }
+    </script>
+    <style>
+        .container{
+            position: relative;
+            width: 540px;
+            height: 540px;
+        }
+        .background{
+            position: absolute;
+            z-index: -2;
+        }
+        canvas{
+            width: 540px;
+            height: 540px;
+        }
+        .preview{
+            position: absolute;
+            z-index: -1;
+            left: calc(50% - 30px);
+            top: calc(50% - 9px);
+            width: 60px;
+            color: #555555;
+        }
+        .preview > div{
+            width: 100%;
+            text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="background"><canvas id="canvas" width="540" height="540"></canvas></div>
+        <div class="preview"><div id="time-preview"></div></div>
+        <div class="feeding-time">
+            <div class="feeding-time-item"><input type="hidden" name="feeding_time_0" value=""></div>
+            <div class="feeding-time-item"><input type="hidden" name="feeding_time_1" value=""></div>
+            <div class="feeding-time-item"><input type="hidden" name="feeding_time_2" value=""></div>
+            <div class="feeding-time-item"><input type="hidden" name="feeding_time_3" value=""></div>
+        </div>
+    </div>
+<!-- Code injected by live-server -->
+<script type="text/javascript">
+	// <![CDATA[  <-- For SVG support
+	if ('WebSocket' in window) {
+		(function () {
+			function refreshCSS() {
+				var sheets = [].slice.call(document.getElementsByTagName("link"));
+				var head = document.getElementsByTagName("head")[0];
+				for (var i = 0; i < sheets.length; ++i) {
+					var elem = sheets[i];
+					var parent = elem.parentElement || head;
+					parent.removeChild(elem);
+					var rel = elem.rel;
+					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
+						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
+						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
+					}
+					parent.appendChild(elem);
+				}
+			}
+			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+			var address = protocol + window.location.host + window.location.pathname + '/ws';
+			var socket = new WebSocket(address);
+			socket.onmessage = function (msg) {
+				if (msg.data == 'reload') window.location.reload();
+				else if (msg.data == 'refreshcss') refreshCSS();
+			};
+			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
+				console.log('Live reload enabled.');
+				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
+			}
+		})();
+	}
+	else {
+		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
+	}
+	// ]]>
+</script></body>
+</html>
